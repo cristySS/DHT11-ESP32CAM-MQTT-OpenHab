@@ -1,7 +1,7 @@
 /*
  * Conexión básica por MQTT del NodeMCU
  * por: Cristina Sanchez
- * Fecha: 
+ * Fecha: 01 de junio 2022
  * 
  * Este programa envía datos  por Internet a través del protocolo MQTT. Para poder
  * comprobar el funcionamiento de este programa, es necesario conectarse a un broker
@@ -16,14 +16,19 @@
 //Bibliotecas
 #include <WiFi.h>  // Biblioteca para el control de WiFi
 #include <PubSubClient.h> //Biblioteca para conexion MQTT
+#include "DHT.h"
+#define DHTPIN 4
+//#define DHTTYPE DHT11
+#define DHTTYPE DHT21
 
+DHT dht(DHTPIN, DHTTYPE);
 //Datos de WiFi
 const char* ssid = "IZZI-8F7C";  // Aquí debes poner el nombre de tu red
 const char* password = "C85261838F7C";  // Aquí debes poner la contraseña de tu red
 
 //Datos del broker MQTT
-const char* mqtt_server = "192.168.1.11"; // Si estas en una red local, coloca la IP asignada, en caso contrario, coloca la IP publica
-IPAddress server(192,168,1,11);
+const char* mqtt_server = "192.168.0.10"; // Si estas en una red local, coloca la IP asignada, en caso contrario, coloca la IP publica
+IPAddress server(192,168,0,10);
 
 // Objetos
 WiFiClient espClient; // Este objeto maneja los datos de conexion WiFi
@@ -40,6 +45,9 @@ int wait = 5000;  // Indica la espera cada 5 segundos para envío de mensajes MQ
 void setup() {
   // Iniciar comunicación serial
   Serial.begin (115200);
+
+  dht.begin();
+  
   pinMode (flashLedPin, OUTPUT);
   pinMode (statusLedPin, OUTPUT);
   digitalWrite (flashLedPin, LOW);
@@ -93,12 +101,15 @@ void loop() {
   if (timeNow - timeLast > wait) { // Manda un mensaje por MQTT cada cinco segundos
     timeLast = timeNow; // Actualización de seguimiento de tiempo
 
-    data++; // Incremento a la variable para ser enviado por MQTT
+    //data++; // Incremento a la variable para ser enviado por MQTT
+    float t = dht.readTemperature();
+    float f = dht.readTemperature(true);
+    
     char dataString[8]; // Define una arreglo de caracteres para enviarlos por MQTT, especifica la longitud del mensaje en 8 caracteres
     dtostrf(data, 1, 2, dataString);  // Esta es una función nativa de leguaje AVR que convierte un arreglo de caracteres en una variable String
     Serial.print("Contador: "); // Se imprime en monitor solo para poder visualizar que el evento sucede
     Serial.println(dataString);
-    client.publish("esp32/data", dataString); // Esta es la función que envía los datos por MQTT, especifica el tema y el valor
+    client.publish("codigoIoT/G6/temp", dataString); // Esta es la función que envía los datos por MQTT, especifica el tema y el valor
   }// fin del if (timeNow - timeLast > wait)
 }// fin del void loop ()
 
