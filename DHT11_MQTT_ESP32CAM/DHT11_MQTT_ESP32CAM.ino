@@ -21,7 +21,6 @@
 //#define DHTTYPE DHT11
 #define DHTTYPE DHT21
 
-DHT dht(DHTPIN, DHTTYPE);
 //Datos de WiFi
 const char* ssid = "IZZI-8F7C";  // Aquí debes poner el nombre de tu red
 const char* password = "C85261838F7C";  // Aquí debes poner la contraseña de tu red
@@ -33,6 +32,9 @@ IPAddress server(192,168,0,10);
 // Objetos
 WiFiClient espClient; // Este objeto maneja los datos de conexion WiFi
 PubSubClient client(espClient); // Este objeto maneja los datos de conexion al broker
+
+
+DHT dht(DHTPIN, DHTTYPE); //objeto para el manejo del DHTxx
 
 // Variables
 int flashLedPin = 4;  // Para indicar el estatus de conexión
@@ -46,8 +48,7 @@ void setup() {
   // Iniciar comunicación serial
   Serial.begin (115200);
 
-  dht.begin();
-  
+   
   pinMode (flashLedPin, OUTPUT);
   pinMode (statusLedPin, OUTPUT);
   digitalWrite (flashLedPin, LOW);
@@ -86,6 +87,8 @@ void setup() {
   client.setCallback(callback); // Activar función de CallBack, permite recibir mensajes MQTT y ejecutar funciones a partir de ellos
   delay(1500);  // Esta espera es preventiva, espera a la conexión para no perder información
 
+    dht.begin();
+
   timeLast = millis (); // Inicia el control de tiempo
 }// fin del void setup ()
 
@@ -102,14 +105,28 @@ void loop() {
     timeLast = timeNow; // Actualización de seguimiento de tiempo
 
     //data++; // Incremento a la variable para ser enviado por MQTT
+    //obtener lecturas de temperatura y humedad del sensor
+    float h = dht.readHumidity();
     float t = dht.readTemperature();
     float f = dht.readTemperature(true);
+
+    //comprobar que la conexion con el sensor sea exitosa
+    if (isnan(h) || isnan(t)){
+      Serial.println(F("Fallo en la lectura del sensor!"));
+      return;
+    }
     
     char dataString[8]; // Define una arreglo de caracteres para enviarlos por MQTT, especifica la longitud del mensaje en 8 caracteres
-    dtostrf(data, 1, 2, dataString);  // Esta es una función nativa de leguaje AVR que convierte un arreglo de caracteres en una variable String
-    Serial.print("Contador: "); // Se imprime en monitor solo para poder visualizar que el evento sucede
+    dtostrf(t, 1, 2, dataString);  // Esta es una función nativa de leguaje AVR que convierte un arreglo de caracteres en una variable String
+    Serial.print("Temperatura: "); // Se imprime en monitor solo para poder visualizar que el evento sucede
     Serial.println(dataString);
     client.publish("codigoIoT/G6/temp", dataString); // Esta es la función que envía los datos por MQTT, especifica el tema y el valor
+
+    delay(100);
+    dtostrf(h, 1, 2, dataString);  // Esta es una función nativa de leguaje AVR que convierte un arreglo de caracteres en una variable String
+    Serial.print("Humedad: "); // Se imprime en monitor solo para poder visualizar que el evento sucede
+    Serial.println(dataString);
+    client.publish("codigoIoT/G6/hum", dataString); // Esta es la función que envía los datos por MQTT, especifica el tema y el valor
   }// fin del if (timeNow - timeLast > wait)
 }// fin del void loop ()
 
